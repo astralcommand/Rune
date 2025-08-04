@@ -65,4 +65,6 @@ app.listen(port, () => {
     console.error('Error in batch trigger:', error.message);
     res.status(500).send('Failed to trigger batch to Make');
   }
+});app.get('/debug', (req, res) => {
+  res.send("Rune is running and listening. If tasks are failing, check server logs on Render.");
 });

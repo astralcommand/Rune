@@ -50,4 +50,17 @@ app.post('/summon', async (req, res) => {
 
 app.listen(port, () => {
   console.log(`Rune server is alive on port ${port}`);
+});app.post('/trigger', async (req, res) => {
+  try {
+    const payload = req.body;
+
+    const makeWebhookUrl = 'https://hook.us2.make.com/tswu2vbvrjfwj7dhxpjlu4qz1f5qjxbl'; // ← Still the Make webhook
+
+    const response = await axios.post(makeWebhookUrl, payload);
+
+    res.status(200).send('Trigger sent to Make');
+  } catch (error) {
+    console.error('Error hitting /trigger route:', error.message);
+    res.status(500).send('Failed to trigger Make scenario');
+  }
 });

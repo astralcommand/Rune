@@ -1,29 +1,35 @@
 // index.js
-console.log("Rune server is alive. More features coming soon.");
-const http = require('http');
+const express = require('express');
+const axios = require('axios');
+const app = express();
 
-// Create server
-const server = http.createServer((req, res) => {
-  if (req.url === '/rune' && req.method === 'POST') {
-    let body = '';
+app.use(express.json());
 
-    req.on('data', chunk => {
-      body += chunk.toString();
-    });
+const WEBHOOK_URL = 'https://hook.us2.make.com/t1mfeiv5rutglvxjbn0xcmt8tavr1v4o';
 
-    req.on('end', () => {
-      console.log('📡 Incoming data:', body);
-      res.writeHead(200, { 'Content-Type': 'text/plain' });
-      res.end('Rune received your transmission.');
-    });
-  } else {
-    res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.end('Rune is listening...');
+// Example payload — Rune will send this when triggered
+const payload = {
+  task: "Call SNHU advising",
+  assignedTo: "Quill",
+  urgency: "High",
+  category: "School"
+};
+
+app.get('/', (req, res) => {
+  res.send('Rune server is listening. 👁️‍🗨️🖤');
+});
+
+app.post('/trigger', async (req, res) => {
+  try {
+    await axios.post(WEBHOOK_URL, payload);
+    res.status(200).send('Payload sent to Make successfully.');
+  } catch (error) {
+    console.error('Error sending webhook:', error.message);
+    res.status(500).send('Failed to send payload.');
   }
 });
 
-// Set the port from environment variable (Render needs this)
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`🚀 Rune server is up and listening on port ${PORT}`);
+app.listen(PORT, () => {
+  console.log(`Rune server is alive on port ${PORT}`);
 });

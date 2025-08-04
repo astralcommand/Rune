@@ -52,15 +52,17 @@ app.listen(port, () => {
   console.log(`Rune server is alive on port ${port}`);
 });app.post('/trigger', async (req, res) => {
   try {
-    const payload = req.body;
+    const makeWebhookUrl = 'https://hook.us2.make.com/t1mfeiv5rutglvxjbn0xcmt8tavr1v4o';
 
-    const makeWebhookUrl = 'https://hook.us2.make.com/tswu2vbvrjfwj7dhxpjlu4qz1f5qjxbl'; // ← Still the Make webhook
+    const tasks = Array.isArray(req.body) ? req.body : [req.body];
 
-    const response = await axios.post(makeWebhookUrl, payload);
+    for (const task of tasks) {
+      await axios.post(makeWebhookUrl, task);
+    }
 
-    res.status(200).send('Trigger sent to Make');
+    res.status(200).send('All tasks sent to Make');
   } catch (error) {
-    console.error('Error hitting /trigger route:', error.message);
-    res.status(500).send('Failed to trigger Make scenario');
+    console.error('Error in batch trigger:', error.message);
+    res.status(500).send('Failed to trigger batch to Make');
   }
 });

@@ -28,17 +28,50 @@ app.post('/trigger', async (req, res) => {
 
 // ========== /summon route for creating Notion pages ==========
 app.post('/summon', async (req, res) => {
+  const { title, parentPageId, children } = req.body;
+
+  const notionHeaders = {
+    'Authorization': `Bearer ${process.env.NOTION_API_KEY}`,
+    'Notion-Version': '2022-06-28',
+    'Content-Type': 'application/json',
+  };
+
   try {
-    const payload = req.body;
+    // Step 1: Create the page
+    const createPageResponse = await axios.post(
+      'https://api.notion.com/v1/pages',
+      {
+        parent: { page_id: parentPageId },
+        properties: {
+          title: [
+            {
+              text: {
+                content: title,
+              },
+            },
+          ],
+        },
+      },
+      { headers: notionHeaders }
+    );
 
-    const makeWebhookUrl = 'https://hook.us2.make.com/tswu2vbvrjfwj7dhxpjlu4qz1f5qjxbl'; // ← You’ll swap this once Make gives the webhook
+    const pageId = createPageResponse.data.id;
 
-    const response = await axios.post(makeWebhookUrl, payload);
+    // Step 2: Append the children blocks
+    if (children && children.length > 0) {
+      await axios.patch(
+        `https://api.notion.com/v1/blocks/${pageId}/children`,
+        {
+          children: children,
+        },
+        { headers: notionHeaders }
+      );
+    }
 
-    res.status(200).send('Page summon sent to Make');
+    res.status(200).send(`Page '${title}' created and blocks added.`);
   } catch (error) {
-    console.error('Error hitting /summon route:', error.message);
-    res.status(500).send('Failed to send page summon to Make');
+    console.error('Error in /summon:', error.response?.data || error.message);
+    res.status(500).send('Failed to summon page.');
   }
 });
 

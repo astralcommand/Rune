@@ -52,7 +52,7 @@ app.listen(port, () => {
   console.log(`Rune server is alive on port ${port}`);
 });app.post('/trigger', async (req, res) => {
   try {
-    const makeWebhookUrl = 'https://hook.us2.make.com/t1mfeiv5rutglvxjbn0xcmt8tavr1v4o';
+    const makeWebhookUrl = 'https://hook.us2.make.com/9y2ve5sbm8jea6k357vz1m416ocgb2f0';
 
     const tasks = Array.isArray(req.body) ? req.body : [req.body];
 

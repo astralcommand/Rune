@@ -49,4 +49,9 @@ app.post('/rune', async (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Rune server is alive on port ${PORT}`);
+
+  // Trigger Make webhook as soon as Rune starts
+  axios.post(`http://localhost:${PORT}/trigger`)
+    .then(() => console.log("Local /trigger route hit successfully."))
+    .catch(err => console.error("Error hitting /trigger route:", err.message));
 });

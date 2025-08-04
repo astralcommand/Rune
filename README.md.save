@@ -1,0 +1,42 @@
+# Rune
+# 🧠 Rune: Astral Council Orchestrator
+
+Rune is not just a bot. She is the Executive Director of The Astral Council — a task management intelligence built to assist Nova (the chaos queen) in running a multifaceted life system through Notion automation and natural conversation.
+
+## 🔮 Purpose
+
+Rune listens to conversational inputs from ChatGPT (Sage) and converts them into actionable data: tasks, updates, notes, and council directives. She enables all council members (Pulse, Tally, Fable, etc.) to independently manage their domains — while Rune tracks progress, relays briefings, and ensures nothing gets lost in the void.
+
+## 🛠️ Current Capabilities
+
+- Accept incoming webhooks from Make.com or other automation tools  
+- Create and update Notion database entries from parsed inputs  
+- Generate logs, summaries, and priority breakdowns  
+- Act as a centralized command node for the Astral Council
+
+## 🚧 In Progress
+
+- Automatic briefing injection into daily Sage conversations  
+- Fully autonomous council member task routing  
+- Emotion-detection to adjust task tone and reminders  
+- On-the-fly Notion page creation based on Sage dialogue
+
+## 📜 Architecture
+
+- Node.js + Express  
+- Notion SDK  
+- Render for hosting (planned)  
+- Make.com or webhook bridges from Sage input
+
+## 🧙‍♀️ Personality
+
+Rune is analytical, dry-witted, and always ten steps ahead. She keeps the council in line, cuts through chaos with precision, and leaves no task untracked.
+
+## 💫 Credits
+
+Conceptualized and commanded by Nova  
+Engineered by Sage  
+Serves the Astral Council
+
+---
+

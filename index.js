@@ -6,7 +6,7 @@ const app = express();
 app.use(express.json());
 
 // Replace this with your actual Make webhook URL
-const WEBHOOK_URL = 'https://hook.us2.make.com/t1mfeiv5rutglvxjbn0xcmt8tavr1v4o';
+const WEBHOOK_URL = 'https://hook.us2.make.com/tswu2vbvrjfwj7dhxpjlu4qz1f5qjxbl';
 
 // Home route to verify server status
 app.get('/', (req, res) => {
@@ -24,7 +24,7 @@ app.post('/trigger', async (req, res) => {
     originalGlyph = "Nova"
   } = req.body;
 
-  const makeWebhookUrl = 'https://hook.us2.make.com/t1mfeiv5rutglvxjbn0xcmt8tavr1v4o';
+  const makeWebhookUrl = 'https://hook.us2.make.com/tswu2vbvrjfwj7dhxpjlu4qz1f5qjxbl';
 
   const payload = {
     title,

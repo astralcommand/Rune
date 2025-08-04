@@ -1,72 +1,47 @@
-// index.js
 const express = require('express');
 const axios = require('axios');
+const bodyParser = require('body-parser');
 const app = express();
+const PORT = process.env.PORT || 10000;
 
-app.use(express.json());
+app.use(bodyParser.json());
 
-// Replace this with your actual Make webhook URL
-const WEBHOOK_URL = 'https://hook.us2.make.com/tswu2vbvrjfwj7dhxpjlu4qz1f5qjxbl';
-
-// Home route to verify server status
 app.get('/', (req, res) => {
-  res.send('Rune server is listening. 👁️‍🗨️🖤');
+  res.send('Rune server is alive on port ' + PORT);
 });
 
+// ========== /trigger route for sending tasks to Notion database ==========
 app.post('/trigger', async (req, res) => {
-  const {
-    title = "Untitled Task",
-    dueDate = new Date().toISOString(),
-    councilMember = "Unassigned",
-    stellarWeight = "Nebula",
-    stateOfPlay = "Idle",
-    notes = "",
-    originalGlyph = "Nova"
-  } = req.body;
-
-  const makeWebhookUrl = 'https://hook.us2.make.com/tswu2vbvrjfwj7dhxpjlu4qz1f5qjxbl';
-
-  const payload = {
-    title,
-    dueDate,
-    councilMember,
-    stellarWeight,
-    stateOfPlay,
-    notes,
-    originalGlyph
-  };
-
   try {
+    const payload = req.body;
+
+    const makeWebhookUrl = 'https://hook.us2.make.com/tswu2vbvrjfwj7dhxpjlu4qz1f5qjxbl'; // ← Your task list webhook
+
     const response = await axios.post(makeWebhookUrl, payload);
-    console.log("Successfully sent task to Make webhook.");
-    res.status(200).send("Webhook triggered.");
+
+    res.status(200).send('Task payload sent to Make');
   } catch (error) {
-    console.error("Error sending to Make webhook:", error.message);
-    res.status(500).send("Failed to send to Make.");
+    console.error('Error hitting /trigger route:', error.message);
+    res.status(500).send('Failed to send task payload to Make');
   }
 });
 
-// Dynamic payload forwarder route
-app.post('/rune', async (req, res) => {
-  const data = req.body;
-
+// ========== /summon route for creating Notion pages ==========
+app.post('/summon', async (req, res) => {
   try {
-    const response = await axios.post(WEBHOOK_URL, data);
-    console.log('✅ Forwarded dynamic data to Make:', response.status);
-    res.status(200).send('Dynamic payload sent to Make successfully.');
+    const payload = req.body;
+
+    const makeWebhookUrl = 'https://hook.us2.make.com/tswu2vbvrjfwj7dhxpjlu4qz1f5qjxbl'; // ← You’ll swap this once Make gives the webhook
+
+    const response = await axios.post(makeWebhookUrl, payload);
+
+    res.status(200).send('Page summon sent to Make');
   } catch (error) {
-    console.error('❌ Error sending to Make:', error.message);
-    res.status(500).send('Failed to forward dynamic payload.');
+    console.error('Error hitting /summon route:', error.message);
+    res.status(500).send('Failed to send page summon to Make');
   }
 });
 
-// Port binding (for Render)
-const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Rune server is alive on port ${PORT}`);
-
-  // Trigger Make webhook as soon as Rune starts
-  axios.post(`http://localhost:${PORT}/trigger`)
-    .then(() => console.log("Local /trigger route hit successfully."))
-    .catch(err => console.error("Error hitting /trigger route:", err.message));
 });

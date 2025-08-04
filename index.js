@@ -13,21 +13,36 @@ app.get('/', (req, res) => {
   res.send('Rune server is listening. 👁️‍🗨️🖤');
 });
 
-// Static task trigger route (preset payload)
 app.post('/trigger', async (req, res) => {
+  const {
+    title = "Untitled Task",
+    dueDate = new Date().toISOString(),
+    councilMember = "Unassigned",
+    stellarWeight = "Nebula",
+    stateOfPlay = "Idle",
+    notes = "",
+    originalGlyph = "Nova"
+  } = req.body;
+
+  const makeWebhookUrl = 'https://hook.us2.make.com/t1mfeiv5rutglvxjbn0xcmt8tavr1v4o';
+
   const payload = {
-    task: "Call SNHU advising",
-    assignedTo: "Quill",
-    urgency: "High",
-    category: "School"
+    title,
+    dueDate,
+    councilMember,
+    stellarWeight,
+    stateOfPlay,
+    notes,
+    originalGlyph
   };
 
   try {
-    await axios.post(WEBHOOK_URL, payload);
-    res.status(200).send('Preset payload sent to Make successfully.');
+    const response = await axios.post(makeWebhookUrl, payload);
+    console.log("Successfully sent task to Make webhook.");
+    res.status(200).send("Webhook triggered.");
   } catch (error) {
-    console.error('Error sending static webhook:', error.message);
-    res.status(500).send('Failed to send preset payload.');
+    console.error("Error sending to Make webhook:", error.message);
+    res.status(500).send("Failed to send to Make.");
   }
 });
 

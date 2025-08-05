@@ -46,6 +46,42 @@ app.post('/summon', async (req, res) => {
     console.error('❌ Failed to create Notion page:', error.response?.data || error.message);
     res.status(500).send('Failed to create Notion page');
   }
+});// ===== POST /trigger: Create tasks directly in Notion (batch or single) =====
+app.post('/trigger', async (req, res) => {
+  // Normalize payload to an array
+  const tasks = Array.isArray(req.body) ? req.body : [req.body];
+
+  // Create an Axios instance for Notion
+  const notion = axios.create({
+    baseURL: 'https://api.notion.com/v1/',
+    headers: {
+      'Authorization': `Bearer ${process.env.NOTION_TOKEN}`,
+      'Notion-Version': '2022-06-28',
+      'Content-Type': 'application/json'
+    }
+  });
+
+  try {
+    for (const task of tasks) {
+      await notion.post('pages', {
+        parent: { database_id: process.env.MASTER_TASK_DB_ID },
+        properties: {
+          Title:           { title:     [{ text: { content: task.title } }] },
+          Due:             { date:      { start: task.dueDate } },
+          Council:         { select:    { name: task.councilMember } },
+          Stellar_Weight:  { select:    { name: task.stellarWeight } },
+          State:           { select:    { name: task.stateOfPlay } },
+          Notes:           { rich_text: [{ text: { content: task.notes } }] },
+          Glyph:           { select:    { name: task.originalGlyph } }
+        }
+      });
+    }
+    console.log(`✅ Created ${tasks.length} task(s) in Notion`);
+    res.status(200).send(`✅ Created ${tasks.length} task(s) in Notion`);
+  } catch (err) {
+    console.error('❌ /trigger error:', err.response?.data || err.message);
+    res.status(500).send('❌ Failed to create tasks in Notion');
+  }
 });
 
 app.listen(PORT, () => {

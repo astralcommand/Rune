@@ -46,24 +46,50 @@ app.post('/summon', async (req, res) => {
   }
 });
 
-// ===== POST /trigger: Send one or more tasks to Make =====
+// ===== POST /trigger: Create tasks directly in Notion =====
 app.post('/trigger', async (req, res) => {
-  const makeWebhookUrl = 'https://hook.us2.make.com/9y2ve5sbm8jea6k357vz1m416ocgb2f0';
-
   const tasks = Array.isArray(req.body) ? req.body : [req.body];
+  const notion = axios.create({
+    baseURL: 'https://api.notion.com/v1/',
+    headers: {
+      'Authorization': `Bearer ${process.env.NOTION_TOKEN}`,
+      'Notion-Version': '2022-06-28',
+      'Content-Type': 'application/json'
+    }
+  });
 
   try {
     for (const task of tasks) {
-      await axios.post(makeWebhookUrl, task);
+      await notion.post('pages', {
+        parent: { database_id: process.env.MASTER_TASK_DB_ID },
+        properties: {
+          Title: {
+            title: [{ text: { content: task.title } }]
+          },
+          Due: {
+            date: { start: task.dueDate }
+          },
+          Council: {
+            select: { name: task.councilMember }
+          },
+          Stellar_Weight: {
+            select: { name: task.stellarWeight }
+          },
+          State: {
+            select: { name: task.stateOfPlay }
+          },
+          Notes: {
+            rich_text: [{ text: { content: task.notes } }]
+          },
+          Glyph: {
+            select: { name: task.originalGlyph }
+          }
+        }
+      });
     }
-    console.log('✨ All tasks dispatched to Make');
-    res.status(200).send('All tasks sent to Make');
+    res.status(200).send('All tasks created in Notion');
   } catch (error) {
-    console.error('Error in batch trigger:', error.response?.status, error.response?.data || error.message);
-    res.status(500).send('Failed to trigger batch to Make');
+    console.error('Notion task creation failed:', error.response?.data || error.message);
+    res.status(500).send('Failed to create tasks in Notion');
   }
-});
-
-app.listen(port, () => {
-  console.log(`Rune server is alive on port ${port}`);
 });

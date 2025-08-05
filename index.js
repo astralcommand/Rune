@@ -55,8 +55,8 @@ app.post('/trigger', async (req, res) => {
     headers: {
       'Authorization': `Bearer ${process.env.NOTION_TOKEN}`,
       'Notion-Version': '2022-06-28',
-      'Content-Type': 'application/json'
-    }
+      'Content-Type': 'application/json',
+    },
   });
 
   try {
@@ -64,21 +64,20 @@ app.post('/trigger', async (req, res) => {
       await notion.post('pages', {
         parent: { database_id: process.env.MASTER_TASK_DB_ID },
         properties: {
-          // Use the exact display names here:
           "Title": {
             title: [{ text: { content: task.title } }]
           },
           "Due Date": {
             date: { start: task.dueDate }
           },
-          "Council Member": {
+          "Council Members": {
             select: { name: task.councilMember }
           },
           "Stellar Weight": {
             select: { name: task.stellarWeight }
           },
           "State of Play": {
-            select: { name: task.stateOfPlay }
+            status: { name: task.stateOfPlay }
           },
           "Notes": {
             rich_text: [{ text: { content: task.notes } }]

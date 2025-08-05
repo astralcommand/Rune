@@ -47,11 +47,9 @@ app.post('/summon', async (req, res) => {
     res.status(500).send('Failed to create Notion page');
   }
 });// ===== POST /trigger: Create tasks directly in Notion (batch or single) =====
+// inside index.js, replace your /trigger handler with this:
 app.post('/trigger', async (req, res) => {
-  // Normalize payload to an array
   const tasks = Array.isArray(req.body) ? req.body : [req.body];
-
-  // Create an Axios instance for Notion
   const notion = axios.create({
     baseURL: 'https://api.notion.com/v1/',
     headers: {
@@ -66,13 +64,28 @@ app.post('/trigger', async (req, res) => {
       await notion.post('pages', {
         parent: { database_id: process.env.MASTER_TASK_DB_ID },
         properties: {
-          Title:           { title:     [{ text: { content: task.title } }] },
-          Due:             { date:      { start: task.dueDate } },
-          Council:         { select:    { name: task.councilMember } },
-          Stellar_Weight:  { select:    { name: task.stellarWeight } },
-          State:           { select:    { name: task.stateOfPlay } },
-          Notes:           { rich_text: [{ text: { content: task.notes } }] },
-          Glyph:           { select:    { name: task.originalGlyph } }
+          // Use the exact display names here:
+          "Title": {
+            title: [{ text: { content: task.title } }]
+          },
+          "Due Date": {
+            date: { start: task.dueDate }
+          },
+          "Council Member": {
+            select: { name: task.councilMember }
+          },
+          "Stellar Weight": {
+            select: { name: task.stellarWeight }
+          },
+          "State of Play": {
+            select: { name: task.stateOfPlay }
+          },
+          "Notes": {
+            rich_text: [{ text: { content: task.notes } }]
+          },
+          "Original Glyph": {
+            select: { name: task.originalGlyph }
+          }
         }
       });
     }

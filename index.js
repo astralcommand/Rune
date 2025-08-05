@@ -8,16 +8,44 @@ const PORT = process.env.PORT || 10000;
 
 app.use(bodyParser.json());
 
-// ===== GET / =====
+// health check
 app.get('/', (req, res) => {
   res.send('🥳 Hello from Rune!');
 });
 
-// ===== POST /summon =====
+// ===== POST /summon: Create a full Notion page with content blocks =====
 app.post('/summon', async (req, res) => {
-  // simple echo test for now
-  console.log('✅ /summon payload:', req.body);
-  res.status(200).json({ received: req.body });
+  const { title, parentId, blocks } = req.body;
+
+  try {
+    const notionRes = await axios.post(
+      'https://api.notion.com/v1/pages',
+      {
+        parent: { page_id: parentId, type: 'page_id' },
+        properties: {
+          title: [
+            {
+              text: { content: title }
+            }
+          ]
+        },
+        children: blocks
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${process.env.NOTION_TOKEN}`,
+          'Notion-Version': '2022-06-28',
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    console.log('✅ Notion page created:', notionRes.data.id);
+    res.status(200).json({ pageId: notionRes.data.id });
+  } catch (error) {
+    console.error('❌ Failed to create Notion page:', error.response?.data || error.message);
+    res.status(500).send('Failed to create Notion page');
+  }
 });
 
 app.listen(PORT, () => {

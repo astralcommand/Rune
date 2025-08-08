@@ -76,6 +76,9 @@ app.post('/trigger', async (req, res) => {
           "Stellar Weight": {
             select: { name: task.stellarWeight }
           },
+          "Time Block": { select: { name: task.timeBlock } 
+          },
+"Energy Required": { select: { name: task.energyRequired } },
           "State of Play": {
             status: { name: task.stateOfPlay }
           },

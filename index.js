@@ -67,9 +67,7 @@ app.post('/trigger', async (req, res) => {
           "Title": {
             title: [{ text: { content: task.title } }]
           },
-          "Due Date": {
-            date: { start: task.dueDate }
-          },
+          "When": { select: { name: task.when } },
           "Council Members": {
             select: { name: task.councilMember }
           },
@@ -85,9 +83,6 @@ app.post('/trigger', async (req, res) => {
           "Notes": {
             rich_text: [{ text: { content: task.notes } }]
           },
-          "Original Glyph": {
-            select: { name: task.originalGlyph }
-          }
         }
       });
     }

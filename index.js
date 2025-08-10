@@ -170,7 +170,51 @@ app.get('/catalog/refresh', async (req, res) => {
     res.status(500).send('❌ Failed to refresh DB Directory');
   }
 });
+// --- /state: log end-of-session blurbs into Council Ledger ---
+app.post('/state', async (req, res) => {
+  const notion = axios.create({
+    baseURL: 'https://api.notion.com/v1/',
+    headers: {
+      'Authorization': `Bearer ${process.env.NOTION_TOKEN}`,
+      'Notion-Version': '2022-06-28',
+      'Content-Type': 'application/json',
+    },
+  });
 
+  const LEDGER_DB_ID = process.env.COUNCIL_LEDGER_DB_ID;
+  if (!LEDGER_DB_ID) return res.status(400).send('Missing COUNCIL_LEDGER_DB_ID');
+
+  const entries = Array.isArray(req.body) ? req.body : [req.body];
+  const isoDate = (d) => (d || new Date().toISOString()).split('T')[0];
+
+  try {
+    for (const e of entries) {
+      await notion.post('pages', {
+        parent: { database_id: LEDGER_DB_ID },
+        properties: {
+          "Title": { title: [{ text: { content: e.title || `${e.member || 'Member'} — ${isoDate()}` } }] },
+          "Member": { select: { name: e.member } },
+          "State of Play": { status: { name: e.state || e.stateOfPlay } },
+          "Focus": { rich_text: [{ text: { content: e.focus || '' } }] },
+          "Blocker": { rich_text: [{ text: { content: e.blocker || '' } }] },
+          "Next Action": { rich_text: [{ text: { content: e.next || e.nextAction || '' } }] },
+          "When": { select: { name: e.when } },
+          "Energy on Nova": { select: { name: e.energy || e.energyOnNova } },
+          "Resistance": { select: { name: e.resistance } },
+          "Vibe": { number: typeof e.vibe === 'number' ? e.vibe : undefined },
+          "Win": { rich_text: [{ text: { content: e.win || '' } }] },
+          "Reference Link": { url: e.link || null },
+          "Logged At": { date: { start: e.loggedAt ? isoDate(e.loggedAt) : isoDate() } }
+        }
+      });
+      await new Promise(r => setTimeout(r, 150)); // gentle on rate limits
+    }
+    res.status(200).send(`Logged ${entries.length} ledger entr${entries.length>1?'ies':'y'}.`);
+  } catch (err) {
+    console.error('❌ /state error:', err.response?.data || err.message);
+    res.status(500).send('Failed to log ledger entry');
+  }
+});
 app.listen(PORT, () => {
   console.log(`Rune server is alive on port ${PORT}`);
 });

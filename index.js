@@ -254,7 +254,83 @@ app.get('/schema/:dbId', async (req, res) => {
     res.status(400).send('Failed to fetch schema');
   }
 });
+// ===== POST /write: create a row in ANY Notion DB by Directory Key =====
+app.post('/write', async (req, res) => {
+  const notion = axios.create({
+    baseURL: 'https://api.notion.com/v1/',
+    headers: {
+      'Authorization': `Bearer ${process.env.NOTION_TOKEN}`,
+      'Notion-Version': '2022-06-28',
+      'Content-Type': 'application/json',
+    },
+  });
 
+  const DIRECTORY_DB_ID = process.env.DIRECTORY_DB_ID || process.env.DB_DIRECTORY_DB_ID;
+  if (!DIRECTORY_DB_ID) return res.status(400).send('Missing DIRECTORY_DB_ID');
+
+  try {
+    const { key, data } = req.body; // key = Directory “Key”, data = { "Property Name": value, ... }
+    if (!key || !data) return res.status(400).send('Provide { key, data }');
+
+    // 1) Find the Directory row by Key (Title)
+    const q = await notion.post(`databases/${DIRECTORY_DB_ID}/query`, {
+      filter: { property: 'Key', title: { equals: key } },
+      page_size: 1
+    });
+    if (!q.data.results.length) return res.status(404).send(`No Directory row with Key='${key}'`);
+
+    const row = q.data.results[0];
+    const props = row.properties || {};
+    const dbId = props['DB ID']?.rich_text?.[0]?.plain_text;
+    const mapText = props['Property Map']?.rich_text?.[0]?.plain_text;
+
+    if (!dbId) return res.status(400).send(`Directory row '${key}' is missing 'DB ID'`);
+    if (!mapText) return res.status(400).send(`Directory row '${key}' is missing 'Property Map'`);
+
+    // 2) Build properties using saved schema map
+    const schemaByName = JSON.parse(mapText); // { "Title": {type:"title"...}, ... }
+    const buildProp = (type, value) => {
+      switch (type) {
+        case 'title':       return { title: [{ text: { content: String(value ?? '') } }] };
+        case 'rich_text':   return { rich_text: [{ text: { content: String(value ?? '') } }] };
+        case 'number':      return { number: (value === '' || value === null || value === undefined) ? null : Number(value) };
+        case 'date':        return { date: value ? { start: String(value) } : null };
+        case 'checkbox':    return { checkbox: !!value };
+        case 'url':         return { url: value ? String(value) : null };
+        case 'email':       return { email: value ? String(value) : null };
+        case 'phone_number':return { phone_number: value ? String(value) : null };
+        case 'select':      return { select: value ? { name: String(value) } : null };
+        case 'status':      return { status: value ? { name: String(value) } : null };
+        case 'multi_select':
+          return { multi_select: Array.isArray(value) ? value.map(v => ({ name: String(v) })) : value ? [{ name: String(value) }] : [] };
+        case 'relation':
+          // Accept single page id or array of page ids
+          return { relation: (Array.isArray(value) ? value : [value]).filter(Boolean).map(id => ({ id: String(id) })) };
+        default:
+          return undefined; // unsupported types are skipped
+      }
+    };
+
+    const out = {};
+    for (const [name, val] of Object.entries(data)) {
+      const def = schemaByName[name];
+      if (!def) continue; // ignore unknown properties
+      const built = buildProp(def.type, val);
+      if (built !== undefined) out[name] = built;
+    }
+
+    // 3) Create page
+    const resp = await notion.post('pages', {
+      parent: { database_id: dbId },
+      properties: out
+    });
+
+    res.status(200).json({ ok: true, pageId: resp.data.id });
+  } catch (err) {
+    console.error('❌ /write error:', err.response?.data || err.message);
+    res.status(400).send(err.response?.data || 'Failed to write row');
+  }
+});
 // ---------- start ----------
 app.listen(PORT, () => {
   console.log(`Rune server is alive on port ${PORT}`);

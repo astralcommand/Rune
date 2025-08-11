@@ -215,6 +215,85 @@ app.post('/state', async (req, res) => {
     res.status(500).send('Failed to log ledger entry');
   }
 });
+// ===== Schema Helper: GET /schema/:dbId  +  POST /schema/save =================
+app.get('/schema/:dbId', async (req, res) => {
+  try {
+    const notion = axios.create({
+      baseURL: 'https://api.notion.com/v1/',
+      headers: {
+        'Authorization': `Bearer ${process.env.NOTION_TOKEN}`,
+        'Notion-Version': '2022-06-28',
+      },
+    });
+    const { dbId } = req.params;
+    const { data } = await notion.get(`databases/${dbId}`);
+
+    // Build a simple "by-name" property map (name → {type,name})
+    const byName = {};
+    for (const [name, def] of Object.entries(data.properties || {})) {
+      byName[name] = { type: def.type, name };
+    }
+
+    res.json({
+      dbId,
+      title: data.title?.[0]?.plain_text || '',
+      properties: Object.keys(data.properties || {}),
+      propertyMapByName: byName, // paste this into DB Directory → Property Map
+    });
+  } catch (err) {
+    console.error('❌ /schema error:', err.response?.data || err.message);
+    res.status(400).send('Failed to fetch schema');
+  }
+});
+
+app.post('/schema/save', async (req, res) => {
+  try {
+    const notion = axios.create({
+      baseURL: 'https://api.notion.com/v1/',
+      headers: {
+        'Authorization': `Bearer ${process.env.NOTION_TOKEN}`,
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const DIRECTORY_DB_ID = process.env.DIRECTORY_DB_ID;
+    const { key, dbId } = req.body;
+    if (!key || !dbId) return res.status(400).send('Missing key or dbId');
+
+    // 1) fetch schema
+    const dbResp = await notion.get(`databases/${dbId}`);
+    const props = dbResp.data.properties || {};
+    const byName = {};
+    for (const [name, def] of Object.entries(props)) {
+      byName[name] = { type: def.type, name };
+    }
+    const mapJSON = JSON.stringify(byName, null, 2);
+
+    // 2) find Directory row by Key (Title equals key)
+    const dirQuery = await notion.post(`databases/${DIRECTORY_DB_ID}/query`, {
+      filter: { property: 'Key', title: { equals: key } },
+      page_size: 1
+    });
+    if (!dirQuery.data.results.length) {
+      return res.status(404).send(`No DB Directory row found for Key='${key}'`);
+    }
+    const pageId = dirQuery.data.results[0].id;
+
+    // 3) PATCH the row: set DB ID + Property Map (rich_text)
+    await notion.patch(`pages/${pageId}`, {
+      properties: {
+        'DB ID': { rich_text: [{ type: 'text', text: { content: dbId } }] },
+        'Property Map': { rich_text: [{ type: 'text', text: { content: mapJSON } }] },
+      }
+    });
+
+    res.status(200).send(`✅ Saved schema map for ${key}`);
+  } catch (err) {
+    console.error('❌ /schema/save error:', err.response?.data || err.message);
+    res.status(400).send('Failed to save schema to Directory');
+  }
+});
 app.listen(PORT, () => {
   console.log(`Rune server is alive on port ${PORT}`);
 });

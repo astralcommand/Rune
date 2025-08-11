@@ -254,7 +254,7 @@ app.get('/schema/:dbId', async (req, res) => {
     res.status(400).send('Failed to fetch schema');
   }
 });
-// ===== POST /write: create a row in ANY Notion DB by Directory Key =====
+// ===== POST /write: create row(s) in ANY Notion DB by Directory Key =====
 app.post('/write', async (req, res) => {
   const notion = axios.create({
     baseURL: 'https://api.notion.com/v1/',
@@ -269,10 +269,10 @@ app.post('/write', async (req, res) => {
   if (!DIRECTORY_DB_ID) return res.status(400).send('Missing DIRECTORY_DB_ID');
 
   try {
-    const { key, data } = req.body; // key = Directory “Key”, data = { "Property Name": value, ... }
+    const { key, data } = req.body; // data can be an object or an array of objects
     if (!key || !data) return res.status(400).send('Provide { key, data }');
 
-    // 1) Find the Directory row by Key (Title)
+    // 1) Find Directory row by Key (Title)
     const q = await notion.post(`databases/${DIRECTORY_DB_ID}/query`, {
       filter: { property: 'Key', title: { equals: key } },
       page_size: 1
@@ -287,8 +287,8 @@ app.post('/write', async (req, res) => {
     if (!dbId) return res.status(400).send(`Directory row '${key}' is missing 'DB ID'`);
     if (!mapText) return res.status(400).send(`Directory row '${key}' is missing 'Property Map'`);
 
-    // 2) Build properties using saved schema map
-    const schemaByName = JSON.parse(mapText); // { "Title": {type:"title"...}, ... }
+    const schemaByName = JSON.parse(mapText); // { "Name": {type:"title"}, ... }
+
     const buildProp = (type, value) => {
       switch (type) {
         case 'title':       return { title: [{ text: { content: String(value ?? '') } }] };
@@ -304,31 +304,32 @@ app.post('/write', async (req, res) => {
         case 'multi_select':
           return { multi_select: Array.isArray(value) ? value.map(v => ({ name: String(v) })) : value ? [{ name: String(value) }] : [] };
         case 'relation':
-          // Accept single page id or array of page ids
           return { relation: (Array.isArray(value) ? value : [value]).filter(Boolean).map(id => ({ id: String(id) })) };
         default:
-          return undefined; // unsupported types are skipped
+          return undefined;
       }
     };
 
-    const out = {};
-    for (const [name, val] of Object.entries(data)) {
-      const def = schemaByName[name];
-      if (!def) continue; // ignore unknown properties
-      const built = buildProp(def.type, val);
-      if (built !== undefined) out[name] = built;
+    const rows = Array.isArray(data) ? data : [data];
+    const created = [];
+
+    for (const item of rows) {
+      const out = {};
+      for (const [name, val] of Object.entries(item)) {
+        const def = schemaByName[name];
+        if (!def) continue;
+        const built = buildProp(def.type, val);
+        if (built !== undefined) out[name] = built;
+      }
+      const resp = await notion.post('pages', { parent: { database_id: dbId }, properties: out });
+      created.push(resp.data.id);
+      await new Promise(r => setTimeout(r, 150)); // gentle on rate limits
     }
 
-    // 3) Create page
-    const resp = await notion.post('pages', {
-      parent: { database_id: dbId },
-      properties: out
-    });
-
-    res.status(200).json({ ok: true, pageId: resp.data.id });
+    res.status(200).json({ ok: true, count: created.length, pageIds: created });
   } catch (err) {
     console.error('❌ /write error:', err.response?.data || err.message);
-    res.status(400).send(err.response?.data || 'Failed to write row');
+    res.status(400).send(err.response?.data || 'Failed to write row(s)');
   }
 });
 // ---------- start ----------

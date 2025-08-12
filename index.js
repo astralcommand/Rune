@@ -233,7 +233,10 @@ app.get('/catalog', async (req, res) => {
     res.status(400).send('Catalog refresh failed');
   }
 });
-
+// alias so both URLs work
+app.get('/catalog/refresh', (req, res) => {
+  res.redirect(307, '/catalog');
+});
 // ---------- optional debug: get schema for a given DB ----------
 app.get('/schema/:dbId', async (req, res) => {
   try {
